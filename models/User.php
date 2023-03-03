@@ -2,103 +2,86 @@
 
 namespace app\models;
 
-class User extends \yii\base\BaseObject implements \yii\web\IdentityInterface
+use app\exceptions\UserApiException;
+use yii\base\ExitException;
+use yii\helpers\Json;
+use yii\httpclient\Client;
+use yii\httpclient\Exception;
+use yii\httpclient\Response;
+use yii\web\HttpException;
+
+class User
 {
-    public $id;
-    public $username;
-    public $password;
-    public $authKey;
-    public $accessToken;
+    const _BASE_URL_ = 'https://random-data-api.com';
+    private $httpClient;
 
-    private static $users = [
-        '100' => [
-            'id' => '100',
-            'username' => 'admin',
-            'password' => 'admin',
-            'authKey' => 'test100key',
-            'accessToken' => '100-token',
-        ],
-        '101' => [
-            'id' => '101',
-            'username' => 'demo',
-            'password' => 'demo',
-            'authKey' => 'test101key',
-            'accessToken' => '101-token',
-        ],
-    ];
-
-
-    /**
-     * {@inheritdoc}
-     */
-    public static function findIdentity($id)
+    public function __construct()
     {
-        return isset(self::$users[$id]) ? new static(self::$users[$id]) : null;
+        $this->httpClient = new Client(
+            [
+                'baseUrl'       => self::_BASE_URL_,
+                'requestConfig' => [
+                    'format' => Client::FORMAT_JSON
+                ],
+                'responseConfig' => [
+                    'format' => Client::FORMAT_JSON
+                ]
+            ]
+        );
     }
 
     /**
-     * {@inheritdoc}
+     * Получение пользователей
+     * @param int $limit
+     * @return array
      */
-    public static function findIdentityByAccessToken($token, $type = null)
+    public function userList(int $limit): array
     {
-        foreach (self::$users as $user) {
-            if ($user['accessToken'] === $token) {
-                return new static($user);
-            }
-        }
+        $params = [
+            'size' => $limit,
+        ];
 
-        return null;
+        $users = $this->request('GET', '/api/v2/users', $params);
+
+        return $users;
     }
 
     /**
-     * Finds user by username
+     * Используем httpclient для выполнения запросов
      *
-     * @param string $username
-     * @return static|null
-     */
-    public static function findByUsername($username)
-    {
-        foreach (self::$users as $user) {
-            if (strcasecmp($user['username'], $username) === 0) {
-                return new static($user);
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getId()
-    {
-        return $this->id;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getAuthKey()
-    {
-        return $this->authKey;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function validateAuthKey($authKey)
-    {
-        return $this->authKey === $authKey;
-    }
-
-    /**
-     * Validates password
+     * @param string $method
+     * @param string $url
+     * @param array  $data
      *
-     * @param string $password password to validate
-     * @return bool if password provided is valid for current user
+     * @return array
      */
-    public function validatePassword($password)
+    private function send(string $method, string $url, array $data): Response
     {
-        return $this->password === $password;
+        $request = $this->httpClient
+            ->createRequest()
+            ->setUrl($url)
+            ->setMethod($method)
+            ->setOptions([
+                'timeout' => 3,
+            ])
+            ->setData($data);
+
+        return $request->send();
+    }
+
+    /**
+     * Получение данных по API
+     *
+     * @param string $method
+     * @param string $url
+     * @param array  $data
+     *
+     * @return array
+     */
+    private function request(string $method, string $url, array $data): array
+    {
+        $response = $this->send($method, $url, $data);
+
+        return $response->getData();
     }
 }
