@@ -10,7 +10,9 @@
 
 ===========================================================================
 
-Инструкция по установке:
-Склонировать проект: git clone https://github.com/RomanKuzhekov/test-jsm
+Инструкция по установке: 
+
+Склонировать проект: git clone https://github.com/RomanKuzhekov/test-jsm 
+
 Запустить: composer install
 
