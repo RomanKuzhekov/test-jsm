@@ -82,6 +82,10 @@ class User
     {
         $response = $this->send($method, $url, $data);
 
+        if (!$response->isOk) {
+            throw new UserApiException('Произошла ошибка.');
+        }
+
         return $response->getData();
     }
 }
